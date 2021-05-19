@@ -1,10 +1,7 @@
 from nltk.tokenize import word_tokenize
 from nltk.corpus import stopwords
 from nltk.stem import PorterStemmer
-from math import log, sqrt
-import numpy as np
 import pandas as pd
-import re 
 import string
 
 #Reading a file
@@ -36,7 +33,7 @@ class SpamClassifier(object):
         
     def preprocess(self, sentence):
         sentence = sentence.lower()
-        gram = 2
+        #gram = 2
         words = word_tokenize(sentence)
         #if gram > 1:
         #    w = []
@@ -63,14 +60,16 @@ class SpamClassifier(object):
                     self.spam_dict[words[i]] = self.spam_dict.get(words[i], 0) + 1;
                     self.total_spam_words = self.total_spam_words + 1;
                     if(words[i] not in processed_words):
-                        self.total_unique_words += 1;
+                        self.total_unique_words += 1
+                        processed_words[words[i]] = 1
                 self.spam_mails = self.spam_mails + 1
             elif (label_value == 'ham'):
                 for i in range(len(words)):
                     self.ham_dict[words[i]] = self.ham_dict.get(words[i], 0) + 1;
                     self.total_ham_words = self.total_ham_words + 1;
                     if(words[i] not in processed_words):
-                        self.total_unique_words += 1;
+                        self.total_unique_words += 1
+                        processed_words[words[i]] = 1
                 self.ham_mails = self.ham_mails + 1
                 
         self.total_unique_spam_words = len(self.spam_dict)
@@ -96,15 +95,20 @@ class SpamClassifier(object):
         ham_score = 0
         words = self.preprocess(body)
         for word in words:
-           spam_score += self.spam_dict_prob.get(word, 0)
-           ham_score += self.ham_dict_prob.get(word, 0)
-        #spam_score = spam_score * self.spam_total_prob
-        #ham_score = ham_score * self.ham_total_prob
-        #print(ham_score)
+            if (word in self.spam_dict_prob):
+                spam_score += self.spam_dict_prob[word]
+            else:
+                spam_score += 1 / (self.total_spam_words + self.total_unique_words)
+            if (word in self.ham_dict_prob):
+                ham_score += self.ham_dict_prob[word]
+            else:
+                ham_score += 1 / (self.total_ham_words + self.total_unique_words)
         if(spam_score > ham_score):
             return 'spam', spam_score
-        else:
+        elif(spam_score < ham_score):
             return 'ham', ham_score
+        else:
+            return 'Not able to decide'
     
     def accuracy(self, result, value):
         crct = 0
@@ -144,7 +148,7 @@ for i in range(len(testData_mails)):
 result = spam_classifier.predict(test)
 spam_classifier.accuracy(result, 'ham')
 
-print('****************Overrall accuracy****************')
+print('****************Overrall accuracy***************')
 
 test = list()
 for i in range(len(testData_mails)):
@@ -153,6 +157,7 @@ result = spam_classifier.predict(test)
 spam_classifier.accuracyoverall(result)
 print('********************************')
 
-print(spam_classifier._predict("Watch the 2021 South Blockbusters with English subtitles"))
-#print(trainingData_mails['v1'].value_counts(normalize=True))
+print(spam_classifier._predict("Did you show him and wot did he say or could u not c him 4 dust?")) #ham
+print(spam_classifier._predict("Not heard from U4 a while. Call 4 rude chat private line 01223585334 to cum. Wan 2C pics of me gettin shagged then text PIX to 8552. 2End send STOP 8552 SAM xxx")) #spam
+#print(trainingData_mails['v1'].value_counts())
 #spam_messages = trainingData_mails[trainingData_mails['v1'] == 'spam']
